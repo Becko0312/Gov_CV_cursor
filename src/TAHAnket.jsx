@@ -45,6 +45,74 @@ const COMM_CATS = [
 
 const OFFICE_APPS = ["Microsoft Word", "Microsoft Excel", "Microsoft PowerPoint", "Microsoft Outlook"];
 
+const S = {
+  label: { display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 },
+};
+
+// --- COMPONENTS ---
+// Defined at module scope (not inside TAHAnket) so their identity is stable
+// across re-renders. Otherwise every keystroke would remount the inputs and
+// steal focus, closing the on-screen keyboard after a single character.
+const Field = ({ label, value, onChange, placeholder, type = "text" }) => (
+  <div style={{ marginBottom: 14 }}>
+    <label style={S.label}>{label}</label>
+    <input className="fi" type={type} value={value || ""}
+      onChange={e => onChange(e.target.value)} placeholder={placeholder} />
+  </div>
+);
+
+const SelectField = ({ label, value, onChange, options }) => (
+  <div style={{ marginBottom: 14 }}>
+    <label style={S.label}>{label}</label>
+    <select className="fi" value={value || ""} onChange={e => onChange(e.target.value)}>
+      <option value="">-- Сонгох --</option>
+      {options.map(o => <option key={o} value={o}>{o}</option>)}
+    </select>
+  </div>
+);
+
+const RatingSelect = ({ skillKey, stateObj, setter }) => (
+  <div style={{ display: "flex", gap: 3 }}>
+    {[1, 2, 3].map(n => (
+      <button key={n} className={`rbtn ${stateObj[skillKey] === n ? "rbtn-on" : ""}`}
+        onClick={() => setter(s => ({ ...s, [skillKey]: n }))}>
+        {n}
+      </button>
+    ))}
+  </div>
+);
+
+const DynamicTable = ({ columns, rows, updateRow, addRowFn, removeRowFn }) => (
+  <div style={{ overflowX: "auto" }}>
+    <table className="dtable">
+      <thead>
+        <tr>
+          <th style={{ width: 30 }}>№</th>
+          {columns.map(c => <th key={c.key}>{c.label}</th>)}
+          <th style={{ width: 36 }}></th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row, i) => (
+          <tr key={i}>
+            <td style={{ textAlign: "center", color: "#9ca3af" }}>{i + 1}</td>
+            {columns.map(c => (
+              <td key={c.key}>
+                <input className="tdi" value={row[c.key] || ""}
+                  onChange={e => updateRow(i, c.key, e.target.value)} placeholder={c.ph || ""} />
+              </td>
+            ))}
+            <td>
+              <button className="rm-btn" onClick={() => removeRowFn(i)}>✕</button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+    <button className="add-btn" onClick={addRowFn}>+ Мөр нэмэх</button>
+  </div>
+);
+
 export default function TAHAnket() {
   const [step, setStep] = useState(0);
 
@@ -109,67 +177,6 @@ export default function TAHAnket() {
   const handlePrint = () => window.print();
 
   const progress = ((step + 1) / STEPS.length) * 100;
-
-  // --- COMPONENTS ---
-  const Field = ({ label, value, onChange, placeholder, type = "text" }) => (
-    <div style={{ marginBottom: 14 }}>
-      <label style={S.label}>{label}</label>
-      <input className="fi" type={type} value={value || ""}
-        onChange={e => onChange(e.target.value)} placeholder={placeholder} />
-    </div>
-  );
-
-  const SelectField = ({ label, value, onChange, options }) => (
-    <div style={{ marginBottom: 14 }}>
-      <label style={S.label}>{label}</label>
-      <select className="fi" value={value || ""} onChange={e => onChange(e.target.value)}>
-        <option value="">-- Сонгох --</option>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-    </div>
-  );
-
-  const RatingSelect = ({ skillKey, stateObj, setter }) => (
-    <div style={{ display: "flex", gap: 3 }}>
-      {[1, 2, 3].map(n => (
-        <button key={n} className={`rbtn ${stateObj[skillKey] === n ? "rbtn-on" : ""}`}
-          onClick={() => setter(s => ({ ...s, [skillKey]: n }))}>
-          {n}
-        </button>
-      ))}
-    </div>
-  );
-
-  const DynamicTable = ({ columns, rows, updateRow, addRowFn, removeRowFn }) => (
-    <div style={{ overflowX: "auto" }}>
-      <table className="dtable">
-        <thead>
-          <tr>
-            <th style={{ width: 30 }}>№</th>
-            {columns.map(c => <th key={c.key}>{c.label}</th>)}
-            <th style={{ width: 36 }}></th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i}>
-              <td style={{ textAlign: "center", color: "#9ca3af" }}>{i + 1}</td>
-              {columns.map(c => (
-                <td key={c.key}>
-                  <input className="tdi" value={row[c.key] || ""}
-                    onChange={e => updateRow(i, c.key, e.target.value)} placeholder={c.ph || ""} />
-                </td>
-              ))}
-              <td>
-                <button className="rm-btn" onClick={() => removeRowFn(i)}>✕</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <button className="add-btn" onClick={addRowFn}>+ Мөр нэмэх</button>
-    </div>
-  );
 
   const renderStep = () => {
     switch (step) {
@@ -700,7 +707,3 @@ export default function TAHAnket() {
     </div>
   );
 }
-
-const S = {
-  label: { display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 },
-};
