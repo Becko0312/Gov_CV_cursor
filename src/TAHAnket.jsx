@@ -1,5 +1,7 @@
 import { useState, useCallback } from "react";
 import { exportElementToPdf } from "./exportPdf.js";
+import { SKILLS_LEFT, SKILLS_RIGHT, COMM_CATS, OFFICE_APPS } from "./skills.js";
+import OfficialForm from "./OfficialForm.jsx";
 
 const STEPS = [
   "Хувь хүний мэдээлэл",
@@ -25,26 +27,6 @@ const emptyDisciplineRow = () => ({ org: "", penalty: "", decision: "", reason: 
 const emptyTrainingRow = () => ({ place: "", dates: "", field: "", degree: "", certNo: "" });
 const emptyAwardRow = () => ({ name: "", date: "", decision: "", reason: "" });
 const emptyCompensationRow = () => ({ name: "", amount: "", date: "", decision: "", reason: "" });
-
-const SKILLS_LEFT = [
-  { cat: "1.Өөрийгөө танин мэдэх", items: ["өөрийн эрхэмлэх дээдлэх зүйлс ба тэргүүлэх чиглэлээ тодорхойлох", "танин мэдэх хэв маягаа тодорхойлох", "өөрчлөлтийг хүлээн авах"] },
-  { cat: "2.Цагийн менежментийг төлөвлөх", items: ["цагийг үр бүтээлтэй ашиглах", "хийх ажлыг эрэмбэлэх", "илүү цагаар ажиллах"] },
-  { cat: "3.Асуудлыг шийдвэрлэх", items: ["зүй зохистой хандлагыг хэрэглэх", "бүтээлч хандлагыг ашиглах", "шинэ санаачилгыг дэмжих"] },
-  { cat: "4.Удирдан зохион байгуулах", items: ["ажил үүргийн зорилгоо тодорхой гаргаж, хэрэгжүүлэх", "хүний нөөц төлөвлөлтийг оновчтой зохион байгуулах", "санал хүсэлт, ажлын тайлагналтад нээлттэй шударга хандах", "хүмүүст тэгш, ялгаваргүй хандах"] },
-];
-
-const SKILLS_RIGHT = [
-  { cat: "Багаар ажиллах", items: ["мэдлэг, мэдээлэл, ур чадварыг хуваалцах", "багаар ажиллахад өөрийн гүйцэтгэх үүргээ тодорхойлон, багийн ажлыг сайжруулах", "олон талт, эрх тэгш байдлыг хүлээн зөвшөөрөх"] },
-  { cat: "Бусад ур чадвар", items: ["үүрэг хүлээх", "хариуцлага хүлээх", "нийтийн зорилгод тууштай байх", "өөрийгөө хөгжүүлэх", "асуудал боловсруулах", "оновчтой шийдвэр гаргах", "мэдээллийн эх үүсвэрийг ашиглах"] },
-  { cat: "Дүн шинжилгээ хийх", items: ["нотолгоонд суурилсан дүн шинжилгээ, судалгаа хийх", "тайлан, тоон мэдээллийг боловсруулах, сан үүсгэх", "хяналт шинжилгээ, аудитын дүн мэдээллийг ашиглах"] },
-];
-
-const COMM_CATS = [
-  { cat: "Бусдад урам өгөх", items: ["үр нөлөөгүй үйл ажиллагааг илрүүлэх", "урам зоригтой ажиллах орчин бий болгох", "амжилтыг урамшуулах", "бусдын санал хүсэлтэд хүндэтгэлтэй хандах"] },
-  { cat: "Зөрчлийг зохицуулах", items: ["шалтгааныг тогтоох", "тохирох стратегийг сонгох", "сэргэлдэх явдлыг арилгах", "буруу ойлголт, төөрөгдлийг тодруулан залруулах"] },
-];
-
-const OFFICE_APPS = ["Microsoft Word", "Microsoft Excel", "Microsoft PowerPoint", "Microsoft Outlook"];
 
 const S = {
   label: { display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 },
@@ -605,16 +587,19 @@ export default function TAHAnket() {
     }
   };
 
-  // While exporting we render every step at once so the whole form ends up in
-  // the PDF; otherwise only the current step is shown.
+  // While exporting we render the official state-template layout (filled with
+  // the entered data) so the PDF matches the official form; otherwise only the
+  // current step's editing UI is shown.
+  const exportData = {
+    personal, familyRows, relativeRows, eduRows, scholarshipRows, doctoralRows,
+    noEducation, phdTopic, scdTopic, skills, commSkills, langRows, langExams,
+    officeSkills, techSkills, workRows, rankRows, militaryRows, sectionB,
+    examRows, crimeRows, disciplineRows, trainingRows, awardRows, compensationRows,
+  };
+
   const renderBody = () => (
     exporting
-      ? STEPS.map((label, i) => (
-          <div key={i} className="pdf-section">
-            <div className="pdf-section-heading">{i + 1}. {label}</div>
-            {renderStepContent(i)}
-          </div>
-        ))
+      ? <OfficialForm data={exportData} />
       : renderStepContent(step)
   );
 
