@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { exportElementToPdf } from "./exportPdf.js";
 
 const STEPS = [
   "Хувь хүний мэдээлэл",
@@ -174,12 +175,26 @@ export default function TAHAnket() {
   const addRow = useCallback((setter, factory) => () => setter(r => [...r, factory()]), []);
   const removeRow = useCallback((setter) => (idx) => setter(r => r.length > 1 ? r.filter((_, i) => i !== idx) : r), []);
 
-  const handlePrint = () => window.print();
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      // Give React a frame to render every step into #form-content before capture.
+      await new Promise(r => setTimeout(r, 60));
+      await exportElementToPdf(document.getElementById("form-content"), "ТАХ-Анкет.pdf");
+    } catch (e) {
+      alert("PDF үүсгэхэд алдаа гарлаа: " + (e && e.message ? e.message : e));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const progress = ((step + 1) / STEPS.length) * 100;
 
-  const renderStep = () => {
-    switch (step) {
+  const renderStepContent = (stepIndex) => {
+    switch (stepIndex) {
       case 0: return (<>
         <div className="card">
           <div className="stitle">Нэг. Хувь хүний талаарх мэдээлэл</div>
@@ -574,14 +589,14 @@ export default function TAHAnket() {
           </div>
           <Field label="Он, сар, өдөр" value={sectionB.signDate} onChange={v => setSectionB(s => ({ ...s, signDate: v }))} placeholder="2026-07-11" />
           <div style={{ textAlign: "center", marginTop: 20 }}>
-            <button className="export-btn" onClick={handlePrint}>
+            <button className="export-btn" onClick={handleExport} disabled={exporting}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
               </svg>
-              PDF хэлбэрээр хэвлэх / татах
+              {exporting ? "PDF үүсгэж байна..." : "PDF хэлбэрээр татах"}
             </button>
-            <p className="note" style={{ marginTop: 8 }}>"Save as PDF" сонголтоор PDF файл болгон хадгална</p>
+            <p className="note" style={{ marginTop: 8 }}>Бүх хэсгийг нэгтгэн PDF файл болгон хадгална</p>
           </div>
         </div>
       </>);
@@ -589,6 +604,19 @@ export default function TAHAnket() {
       default: return null;
     }
   };
+
+  // While exporting we render every step at once so the whole form ends up in
+  // the PDF; otherwise only the current step is shown.
+  const renderBody = () => (
+    exporting
+      ? STEPS.map((label, i) => (
+          <div key={i} className="pdf-section">
+            <div className="pdf-section-heading">{i + 1}. {label}</div>
+            {renderStepContent(i)}
+          </div>
+        ))
+      : renderStepContent(step)
+  );
 
   return (
     <div style={{ minHeight: "100vh", background: "#f0f2f5", fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -645,6 +673,19 @@ export default function TAHAnket() {
           font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
           background: linear-gradient(135deg, #059669, #047857); color: #fff; transition: transform 0.1s; }
         .export-btn:hover { transform: scale(1.02); }
+        .export-btn:disabled { opacity: 0.7; cursor: default; transform: none; }
+
+        .pdf-section-heading { font-size: 15px; font-weight: 700; color: #1a3a5c;
+          margin: 4px 12px; padding: 10px 0 6px; border-bottom: 2px solid #c9a84c; break-before: page; }
+        .pdf-section:first-child .pdf-section-heading { break-before: auto; }
+        .card { page-break-inside: avoid; }
+
+        .pdf-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column;
+          align-items: center; justify-content: center; gap: 14px; background: rgba(26,58,92,0.55);
+          color: #fff; font-size: 15px; font-weight: 600; }
+        .pdf-spinner { width: 38px; height: 38px; border: 4px solid rgba(255,255,255,0.35);
+          border-top-color: #fff; border-radius: 50%; animation: pdfspin 0.8s linear infinite; }
+        @keyframes pdfspin { to { transform: rotate(360deg); } }
 
         .step-bar { display: flex; overflow-x: auto; gap: 4px; padding: 10px 12px; background: #fff; border-bottom: 1px solid #e5e7eb;
           position: sticky; top: 64px; z-index: 99; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -669,6 +710,13 @@ export default function TAHAnket() {
         }
       `}</style>
 
+      {exporting && (
+        <div className="pdf-overlay no-print">
+          <div className="pdf-spinner" />
+          <div>PDF файл үүсгэж байна...</div>
+        </div>
+      )}
+
       <div style={{
         background: "linear-gradient(135deg, #1a3a5c 0%, #2c5f8a 100%)",
         color: "#fff", padding: "18px 16px 14px", textAlign: "center",
@@ -689,8 +737,8 @@ export default function TAHAnket() {
         ))}
       </div>
 
-      <div style={{ paddingBottom: 76, maxWidth: 780, margin: "0 auto" }}>
-        {renderStep()}
+      <div id="form-content" style={{ paddingBottom: 76, maxWidth: 780, margin: "0 auto" }}>
+        {renderBody()}
       </div>
 
       <div className="nav-bar no-print">
@@ -701,7 +749,7 @@ export default function TAHAnket() {
         {step < STEPS.length - 1 ? (
           <button className="nav-btn nav-next" onClick={() => setStep(step + 1)}>Дараах →</button>
         ) : (
-          <button className="export-btn" onClick={handlePrint}>PDF татах</button>
+          <button className="export-btn" onClick={handleExport} disabled={exporting}>{exporting ? "..." : "PDF татах"}</button>
         )}
       </div>
     </div>
