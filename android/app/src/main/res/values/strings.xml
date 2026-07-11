@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ТАХ Анкет</string>
+    <string name="title_activity_main">ТАХ Анкет</string>
+    <string name="package_name">mn.gov.tahanket</string>
+    <string name="custom_url_scheme">mn.gov.tahanket</string>
+</resources>
