@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+
+# Local Android SDK downloaded into the workspace for building
+.android-sdk/
+
+# Capacitor / Android build artifacts
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/
+android/capacitor-cordova-android-plugins/
+android/local.properties
+.idea/
+*.iml
+
+# Keep the built APK tracked deliberately (see app/release-apk)
