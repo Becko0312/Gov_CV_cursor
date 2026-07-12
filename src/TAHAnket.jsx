@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { exportElementToPdf } from "./exportPdf.js";
 import { SKILLS_LEFT, SKILLS_RIGHT, COMM_CATS, OFFICE_APPS } from "./skills.js";
 import OfficialForm from "./OfficialForm.jsx";
@@ -27,6 +27,54 @@ const emptyDisciplineRow = () => ({ org: "", penalty: "", decision: "", reason: 
 const emptyTrainingRow = () => ({ place: "", dates: "", field: "", degree: "", certNo: "" });
 const emptyAwardRow = () => ({ name: "", date: "", decision: "", reason: "" });
 const emptyCompensationRow = () => ({ name: "", amount: "", date: "", decision: "", reason: "" });
+
+// --- LOCAL PERSISTENCE ---
+// The entered data is saved to localStorage (which the Android WebView keeps
+// across app restarts) so the form is restored the next time the app opens.
+const STORAGE_KEY = "tah-anket-form-v1";
+
+const DEFAULT_PERSONAL = {
+  regNo: "", citizenship: "", familyName: "", fatherName: "", firstName: "",
+  gender: "", birthYear: "", birthMonth: "", birthDay: "",
+  ethnicity: "", birthAimag: "", birthSum: "", birthPlace: "",
+  permAimag: "", permSum: "", permBag: "", permKhoroo: "", permBair: "", permToot: "",
+  tempAimag: "", tempSum: "", tempBag: "", tempKhoroo: "", tempBair: "", tempToot: "",
+  phone: "", mobile: "", email: "",
+  emergencyName: "", emergencyPhone: "",
+  maritalStatus: "",
+};
+
+const DEFAULT_TECH = {
+  internet: "", intranet: "",
+  scanner: false, printer: false, copier: false, fax: false,
+  photo: false, video: false, recorder: false,
+};
+
+const DEFAULT_SECTION_B = {
+  parentName: "", firstName: "",
+  mentalYes: false, mentalNo: false, mentalDetails: "", mentalOrg: "",
+  consent: false, signFather: "", signFirst: "", signDate: "",
+};
+
+const DEFAULT_EXAM_ROWS = [
+  { type: "Төрийн албаны ерөнхий шалгалт өгч тэнцсэн эсэх", yesNo: "", note: "" },
+  { type: "Төрийн албанд нөөцөд байгаа эсэх", yesNo: "", note: "" },
+  { type: "Төрийн албаны тусгай шалгалт өгсөн эсэх", yesNo: "", note: "" },
+];
+
+function loadPersisted() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+// Returns the saved array when present, otherwise a fresh default row list.
+function rowsOr(saved, factory) {
+  return Array.isArray(saved) ? saved : [factory()];
+}
 
 const S = {
   label: { display: "block", fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4 },
@@ -97,56 +145,40 @@ const DynamicTable = ({ columns, rows, updateRow, addRowFn, removeRowFn }) => (
 );
 
 export default function TAHAnket() {
+  // Loaded once on mount from localStorage (empty object on first run).
+  const [saved] = useState(loadPersisted);
+
   const [step, setStep] = useState(0);
 
-  const [personal, setPersonal] = useState({
-    regNo: "", citizenship: "", familyName: "", fatherName: "", firstName: "",
-    gender: "", birthYear: "", birthMonth: "", birthDay: "",
-    ethnicity: "", birthAimag: "", birthSum: "", birthPlace: "",
-    permAimag: "", permSum: "", permBag: "", permKhoroo: "", permBair: "", permToot: "",
-    tempAimag: "", tempSum: "", tempBag: "", tempKhoroo: "", tempBair: "", tempToot: "",
-    phone: "", mobile: "", email: "",
-    emergencyName: "", emergencyPhone: "",
-    maritalStatus: "",
-  });
+  const [personal, setPersonal] = useState(() => ({ ...DEFAULT_PERSONAL, ...(saved.personal || {}) }));
 
-  const [familyRows, setFamilyRows] = useState([emptyFamilyRow()]);
-  const [relativeRows, setRelativeRows] = useState([emptyRelativeRow()]);
-  const [eduRows, setEduRows] = useState([emptyEduRow()]);
-  const [scholarshipRows, setScholarshipRows] = useState([emptyScholarshipRow()]);
-  const [doctoralRows, setDoctoralRows] = useState([emptyDoctoralRow()]);
-  const [noEducation, setNoEducation] = useState(false);
-  const [phdTopic, setPhdTopic] = useState("");
-  const [scdTopic, setScdTopic] = useState("");
-  const [skills, setSkills] = useState({});
-  const [commSkills, setCommSkills] = useState({});
-  const [langRows, setLangRows] = useState([emptyLangRow()]);
-  const [langExams, setLangExams] = useState("");
-  const [officeSkills, setOfficeSkills] = useState({});
-  const [techSkills, setTechSkills] = useState({
-    internet: "", intranet: "",
-    scanner: false, printer: false, copier: false, fax: false,
-    photo: false, video: false, recorder: false,
-  });
-  const [workRows, setWorkRows] = useState([emptyWorkRow()]);
-  const [rankRows, setRankRows] = useState([emptyRankRow()]);
-  const [militaryRows, setMilitaryRows] = useState([emptyMilitaryRow()]);
+  const [familyRows, setFamilyRows] = useState(() => rowsOr(saved.familyRows, emptyFamilyRow));
+  const [relativeRows, setRelativeRows] = useState(() => rowsOr(saved.relativeRows, emptyRelativeRow));
+  const [eduRows, setEduRows] = useState(() => rowsOr(saved.eduRows, emptyEduRow));
+  const [scholarshipRows, setScholarshipRows] = useState(() => rowsOr(saved.scholarshipRows, emptyScholarshipRow));
+  const [doctoralRows, setDoctoralRows] = useState(() => rowsOr(saved.doctoralRows, emptyDoctoralRow));
+  const [noEducation, setNoEducation] = useState(() => saved.noEducation || false);
+  const [phdTopic, setPhdTopic] = useState(() => saved.phdTopic || "");
+  const [scdTopic, setScdTopic] = useState(() => saved.scdTopic || "");
+  const [skills, setSkills] = useState(() => saved.skills || {});
+  const [commSkills, setCommSkills] = useState(() => saved.commSkills || {});
+  const [langRows, setLangRows] = useState(() => rowsOr(saved.langRows, emptyLangRow));
+  const [langExams, setLangExams] = useState(() => saved.langExams || "");
+  const [officeSkills, setOfficeSkills] = useState(() => saved.officeSkills || {});
+  const [techSkills, setTechSkills] = useState(() => ({ ...DEFAULT_TECH, ...(saved.techSkills || {}) }));
+  const [workRows, setWorkRows] = useState(() => rowsOr(saved.workRows, emptyWorkRow));
+  const [rankRows, setRankRows] = useState(() => rowsOr(saved.rankRows, emptyRankRow));
+  const [militaryRows, setMilitaryRows] = useState(() => rowsOr(saved.militaryRows, emptyMilitaryRow));
 
-  const [sectionB, setSectionB] = useState({
-    parentName: "", firstName: "",
-    mentalYes: false, mentalNo: false, mentalDetails: "", mentalOrg: "",
-    consent: false, signFather: "", signFirst: "", signDate: "",
-  });
-  const [examRows, setExamRows] = useState([
-    { type: "Төрийн албаны ерөнхий шалгалт өгч тэнцсэн эсэх", yesNo: "", note: "" },
-    { type: "Төрийн албанд нөөцөд байгаа эсэх", yesNo: "", note: "" },
-    { type: "Төрийн албаны тусгай шалгалт өгсөн эсэх", yesNo: "", note: "" },
-  ]);
-  const [crimeRows, setCrimeRows] = useState([emptyCrimeRow()]);
-  const [disciplineRows, setDisciplineRows] = useState([emptyDisciplineRow()]);
-  const [trainingRows, setTrainingRows] = useState([emptyTrainingRow()]);
-  const [awardRows, setAwardRows] = useState([emptyAwardRow()]);
-  const [compensationRows, setCompensationRows] = useState([emptyCompensationRow()]);
+  const [sectionB, setSectionB] = useState(() => ({ ...DEFAULT_SECTION_B, ...(saved.sectionB || {}) }));
+  const [examRows, setExamRows] = useState(() => (
+    Array.isArray(saved.examRows) && saved.examRows.length ? saved.examRows : DEFAULT_EXAM_ROWS
+  ));
+  const [crimeRows, setCrimeRows] = useState(() => rowsOr(saved.crimeRows, emptyCrimeRow));
+  const [disciplineRows, setDisciplineRows] = useState(() => rowsOr(saved.disciplineRows, emptyDisciplineRow));
+  const [trainingRows, setTrainingRows] = useState(() => rowsOr(saved.trainingRows, emptyTrainingRow));
+  const [awardRows, setAwardRows] = useState(() => rowsOr(saved.awardRows, emptyAwardRow));
+  const [compensationRows, setCompensationRows] = useState(() => rowsOr(saved.compensationRows, emptyCompensationRow));
 
   const updatePersonal = (k, v) => setPersonal(p => ({ ...p, [k]: v }));
 
@@ -156,6 +188,58 @@ export default function TAHAnket() {
 
   const addRow = useCallback((setter, factory) => () => setter(r => [...r, factory()]), []);
   const removeRow = useCallback((setter) => (idx) => setter(r => r.length > 1 ? r.filter((_, i) => i !== idx) : r), []);
+
+  // Persist all entered data to localStorage on every change so it survives
+  // closing/reopening the app.
+  useEffect(() => {
+    const data = {
+      personal, familyRows, relativeRows, eduRows, scholarshipRows, doctoralRows,
+      noEducation, phdTopic, scdTopic, skills, commSkills, langRows, langExams,
+      officeSkills, techSkills, workRows, rankRows, militaryRows, sectionB,
+      examRows, crimeRows, disciplineRows, trainingRows, awardRows, compensationRows,
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch {
+      // Ignore storage write errors (e.g. quota / private mode).
+    }
+  }, [
+    personal, familyRows, relativeRows, eduRows, scholarshipRows, doctoralRows,
+    noEducation, phdTopic, scdTopic, skills, commSkills, langRows, langExams,
+    officeSkills, techSkills, workRows, rankRows, militaryRows, sectionB,
+    examRows, crimeRows, disciplineRows, trainingRows, awardRows, compensationRows,
+  ]);
+
+  const handleClearAll = () => {
+    if (!window.confirm("Хадгалсан бүх мэдээллийг устгаж, шинэ анкет эхлүүлэх үү?")) return;
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+    setPersonal({ ...DEFAULT_PERSONAL });
+    setFamilyRows([emptyFamilyRow()]);
+    setRelativeRows([emptyRelativeRow()]);
+    setEduRows([emptyEduRow()]);
+    setScholarshipRows([emptyScholarshipRow()]);
+    setDoctoralRows([emptyDoctoralRow()]);
+    setNoEducation(false);
+    setPhdTopic("");
+    setScdTopic("");
+    setSkills({});
+    setCommSkills({});
+    setLangRows([emptyLangRow()]);
+    setLangExams("");
+    setOfficeSkills({});
+    setTechSkills({ ...DEFAULT_TECH });
+    setWorkRows([emptyWorkRow()]);
+    setRankRows([emptyRankRow()]);
+    setMilitaryRows([emptyMilitaryRow()]);
+    setSectionB({ ...DEFAULT_SECTION_B });
+    setExamRows(DEFAULT_EXAM_ROWS.map(r => ({ ...r })));
+    setCrimeRows([emptyCrimeRow()]);
+    setDisciplineRows([emptyDisciplineRow()]);
+    setTrainingRows([emptyTrainingRow()]);
+    setAwardRows([emptyAwardRow()]);
+    setCompensationRows([emptyCompensationRow()]);
+    setStep(0);
+  };
 
   const [exporting, setExporting] = useState(false);
 
@@ -707,8 +791,19 @@ export default function TAHAnket() {
         color: "#fff", padding: "18px 16px 14px", textAlign: "center",
         position: "sticky", top: 0, zIndex: 100,
       }} className="no-print">
+        <button
+          onClick={handleClearAll}
+          title="Шинэ анкет"
+          style={{
+            position: "absolute", top: 12, right: 12, border: "1px solid rgba(255,255,255,0.4)",
+            background: "rgba(255,255,255,0.12)", color: "#fff", borderRadius: 6, padding: "5px 10px",
+            fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+          }}>
+          Цэвэрлэх
+        </button>
         <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.3px" }}>ТӨРИЙН АЛБАН ХААГЧИЙН АНКЕТ</div>
         <div style={{ fontSize: 11, opacity: 0.75, marginTop: 2 }}>Маягт 1 • ТАЗ 2022.11.14 тогтоол №600</div>
+        <div style={{ fontSize: 10, opacity: 0.7, marginTop: 4 }}>Оруулсан мэдээлэл автоматаар хадгалагдана</div>
         <div style={{ marginTop: 8, height: 3, background: "rgba(255,255,255,0.15)", borderRadius: 2 }}>
           <div style={{ height: "100%", width: `${progress}%`, background: "#c9a84c", borderRadius: 2, transition: "width 0.3s" }} />
         </div>
